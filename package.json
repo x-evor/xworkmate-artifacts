@@ -1,0 +1,52 @@
+{
+  "name": "openclaw-xworkmate-artifacts",
+  "version": "0.1.0",
+  "description": "OpenClaw Gateway artifact export plugin for XWorkmate",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "openclaw",
+    "xworkmate",
+    "artifacts",
+    "gateway",
+    "plugin"
+  ],
+  "homepage": "https://github.com/x-evor/openclaw-xworkmate-artifacts#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/x-evor/openclaw-xworkmate-artifacts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/x-evor/openclaw-xworkmate-artifacts/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "index.ts",
+    "openclaw.plugin.json",
+    "src/exportArtifacts.ts"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "openclaw": "2026.5.3-1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

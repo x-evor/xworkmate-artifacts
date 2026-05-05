@@ -1,0 +1,37 @@
+{
+  "id": "openclaw-xworkmate-artifacts",
+  "name": "XWorkmate Artifacts",
+  "description": "Exports structured artifact manifests from the OpenClaw workspace for XWorkmate.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "workspaceDir": {
+        "type": "string",
+        "description": "Optional workspace directory override. Defaults to the selected OpenClaw agent workspace."
+      },
+      "maxFiles": {
+        "type": "number",
+        "description": "Default maximum number of files to include."
+      },
+      "maxInlineBytes": {
+        "type": "number",
+        "description": "Default maximum file size to inline as base64."
+      }
+    }
+  },
+  "uiHints": {
+    "workspaceDir": {
+      "label": "Workspace Directory",
+      "help": "Leave blank to use the OpenClaw agent workspace."
+    },
+    "maxFiles": {
+      "label": "Max Files",
+      "help": "Upper bound for exported artifacts. Default: 64."
+    },
+    "maxInlineBytes": {
+      "label": "Max Inline Bytes",
+      "help": "Upper bound for base64 inline artifact content. Default: 10485760."
+    }
+  }
+}
