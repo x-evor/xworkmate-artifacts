@@ -20,10 +20,10 @@ The method scans the resolved OpenClaw workspace after a run finishes and return
 
 ## Install
 
-Install from npm:
+Install from the npm package through OpenClaw:
 
 ```bash
-npm install -g xworkmate-artifacts
+openclaw plugins install xworkmate-artifacts
 openclaw plugins enable xworkmate-artifacts
 ```
 

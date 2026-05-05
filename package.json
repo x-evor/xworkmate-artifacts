@@ -1,6 +1,6 @@
 {
   "name": "xworkmate-artifacts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "XWorkmate artifact export plugin for OpenClaw Gateway",
   "type": "module",
   "license": "MIT",
@@ -22,16 +22,20 @@
   "engines": {
     "node": ">=22"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "README.md",
-    "index.ts",
     "openclaw.plugin.json",
-    "src/exportArtifacts.ts"
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "pnpm build && npm pack --dry-run",
+    "prepack": "pnpm build"
   },
   "publishConfig": {
     "access": "public",
@@ -46,7 +50,7 @@
   },
   "openclaw": {
     "extensions": [
-      "./index.ts"
+      "./dist/index.js"
     ]
   }
 }
