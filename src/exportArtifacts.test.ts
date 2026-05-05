@@ -176,6 +176,32 @@ describe("exportXWorkmateArtifacts", () => {
     });
   });
 
+  it("reads artifact metadata without inline content when the file exceeds the limit", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-xworkmate-artifacts-"));
+    await fs.writeFile(path.join(root, "large.bin"), Buffer.from("large-content"));
+
+    const result = await readXWorkmateArtifact({
+      params: {
+        sessionKey: "thread-main",
+        runId: "run-1",
+        relativePath: "large.bin",
+        maxInlineBytes: 2,
+      },
+      pluginConfig: { workspaceDir: root },
+    });
+
+    expect(result.artifacts).toHaveLength(1);
+    expect(result.artifacts[0]).toMatchObject({
+      relativePath: "large.bin",
+      contentType: "application/octet-stream",
+      sizeBytes: Buffer.byteLength("large-content"),
+      sha256: createHash("sha256").update("large-content").digest("hex"),
+    });
+    expect(result.artifacts[0]?.encoding).toBeUndefined();
+    expect(result.artifacts[0]?.content).toBeUndefined();
+    expect(result.warnings).toContain("large.bin exceeds maxInlineBytes and was not inlined");
+  });
+
   it("rejects relative path traversal when reading artifacts", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-xworkmate-artifacts-"));
 
@@ -185,6 +211,25 @@ describe("exportXWorkmateArtifacts", () => {
           sessionKey: "thread-main",
           runId: "run-1",
           relativePath: "../outside.txt",
+        },
+        pluginConfig: { workspaceDir: root },
+      }),
+    ).rejects.toThrow("relativePath must stay inside the workspace");
+  });
+
+  it("rejects symlink escapes when reading artifacts", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-xworkmate-artifacts-"));
+    const outsideRoot = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-xworkmate-outside-"));
+    const outsideFile = path.join(outsideRoot, "secret.txt");
+    await fs.writeFile(outsideFile, "secret");
+    await fs.symlink(outsideFile, path.join(root, "linked-secret.txt"));
+
+    await expect(
+      readXWorkmateArtifact({
+        params: {
+          sessionKey: "thread-main",
+          runId: "run-1",
+          relativePath: "linked-secret.txt",
         },
         pluginConfig: { workspaceDir: root },
       }),
