@@ -126,7 +126,7 @@ function createXWorkmateArtifactsTool(
           config: ctx.config ?? api.config,
           pluginConfig: api.pluginConfig,
         });
-        return { content: [{ type: "text", text: payload.manifestMarkdown }] };
+        return { content: [{ type: "text", text: payload.manifestMarkdown }], details: {} };
       }
       if (action === "read") {
         const payload = await readXWorkmateArtifact({
@@ -144,9 +144,9 @@ function createXWorkmateArtifactsTool(
                 : `\`${artifact.relativePath}\` is larger than maxInlineBytes; use the workspace path to download it directly.`,
             ].join("\n")
           : payload.manifestMarkdown;
-        return { content: [{ type: "text", text }] };
+        return { content: [{ type: "text", text }], details: {} };
       }
       throw new Error("action must be list or read");
     },
-  } as AnyAgentTool;
+  } as unknown as AnyAgentTool;
 }
