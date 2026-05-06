@@ -5,6 +5,7 @@ import type {
 } from "openclaw/plugin-sdk/core";
 import {
   exportXWorkmateArtifacts,
+  prepareXWorkmateArtifacts,
   readXWorkmateArtifact,
 } from "./src/exportArtifacts.js";
 
@@ -24,6 +25,21 @@ const plugin = {
 export default plugin;
 
 function register(api: OpenClawPluginApi) {
+  api.registerGatewayMethod("xworkmate.artifacts.prepare", async (opts: GatewayRequestHandlerOptions) => {
+    try {
+      const payload = await prepareXWorkmateArtifacts({
+        params: opts.params,
+        config: api.config,
+        pluginConfig: api.pluginConfig,
+      });
+      opts.respond(true, payload, undefined);
+    } catch (error) {
+      opts.respond(false, undefined, {
+        code: "INVALID_REQUEST",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
   api.registerGatewayMethod("xworkmate.artifacts.export", async (opts: GatewayRequestHandlerOptions) => {
     try {
       const payload = await exportXWorkmateArtifacts({

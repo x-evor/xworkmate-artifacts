@@ -22,6 +22,7 @@ describe("plugin registration", () => {
     plugin.register(api);
 
     expect(methods.map((entry) => entry.method)).toEqual([
+      "xworkmate.artifacts.prepare",
       "xworkmate.artifacts.export",
       "xworkmate.artifacts.list",
       "xworkmate.artifacts.read",
