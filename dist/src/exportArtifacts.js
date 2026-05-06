@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 const DEFAULT_MAX_FILES = 64;
 const DEFAULT_MAX_INLINE_BYTES = 10 * 1024 * 1024;
-const TASK_SCOPE_ROOT = "tasks";
+const TASK_SCOPE_ROOT = ".xworkmate/artifacts/tasks";
 const GENERATED_ARTIFACT_REF_SECRET = randomBytes(32).toString("hex");
 const SKIPPED_DIRS = new Set([
     ".git",

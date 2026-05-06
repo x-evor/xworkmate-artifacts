@@ -115,7 +115,7 @@ function createXWorkmateArtifactsTool(
         },
         artifactScope: {
           type: "string",
-          description: "Task artifact scope returned by prepare/export, for example tasks/<session>/<run>.",
+          description: "Task artifact scope returned by prepare/export, for example .xworkmate/artifacts/tasks/<session>/<run>.",
         },
         artifactRef: {
           type: "string",

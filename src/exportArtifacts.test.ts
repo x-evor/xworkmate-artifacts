@@ -22,8 +22,8 @@ describe("exportXWorkmateArtifacts", () => {
       pluginConfig: { workspaceDir: root },
     });
 
-    expect(first.artifactScope).toMatch(/^tasks\/thread-main-[a-f0-9]{12}\/turn-1-[a-f0-9]{12}$/);
-    expect(second.artifactScope).toMatch(/^tasks\/thread-main-[a-f0-9]{12}\/turn-2-[a-f0-9]{12}$/);
+    expect(first.artifactScope).toMatch(/^\.xworkmate\/artifacts\/tasks\/thread-main-[a-f0-9]{12}\/turn-1-[a-f0-9]{12}$/);
+    expect(second.artifactScope).toMatch(/^\.xworkmate\/artifacts\/tasks\/thread-main-[a-f0-9]{12}\/turn-2-[a-f0-9]{12}$/);
     expect(first.artifactScope).not.toBe(second.artifactScope);
     expect((await fs.stat(first.artifactDirectory)).isDirectory()).toBe(true);
     expect(first.remoteWorkingDirectory).toBe(await fs.realpath(root));
