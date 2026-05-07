@@ -171,6 +171,44 @@ describe("exportXWorkmateArtifacts", () => {
     expect(result.warnings).toContain("scoped artifact directory is empty; exported latest workspace files instead");
   });
 
+  it("falls back to latest session task files when requested", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-xworkmate-artifacts-"));
+    const previousTask = await prepareXWorkmateArtifacts({
+      params: { sessionKey: "thread-main", runId: "turn-previous" },
+      pluginConfig: { workspaceDir: root },
+    });
+    await fs.writeFile(path.join(previousTask.artifactDirectory, "k8s-networking.pdf"), "pdf");
+    await fs.writeFile(path.join(previousTask.artifactDirectory, "k8s-networking.docx"), "docx");
+
+    const result = await exportXWorkmateArtifacts({
+      params: {
+        sessionKey: "thread-main",
+        runId: "turn-follow-up",
+        sinceUnixMs: Date.now() + 10_000,
+        latestIfEmpty: true,
+        latestTaskScopeIfEmpty: true,
+      },
+      pluginConfig: { workspaceDir: root },
+    });
+
+    expect(result.scopeKind).toBe("workspace-latest");
+    expect(result.artifactScope).toBeUndefined();
+    expect(result.artifacts.map((entry) => entry.relativePath)).toEqual([
+      "k8s-networking.docx",
+      "k8s-networking.pdf",
+    ]);
+    expect(
+      result.artifacts.map((entry) => ({
+        artifactScope: entry.artifactScope,
+        scopeKind: entry.scopeKind,
+      })),
+    ).toEqual([
+      { artifactScope: previousTask.artifactScope, scopeKind: "task" },
+      { artifactScope: previousTask.artifactScope, scopeKind: "task" },
+    ]);
+    expect(result.warnings).toContain("workspace export is empty; exported latest session task files instead");
+  });
+
   it("leaves oversized artifacts out of inline content", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-xworkmate-artifacts-"));
     await fs.writeFile(path.join(root, "large.pdf"), Buffer.from("large-content"));

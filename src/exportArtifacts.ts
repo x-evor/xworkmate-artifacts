@@ -87,6 +87,8 @@ type Candidate = {
   relativePath: string;
   sizeBytes: number;
   mtimeMs: number;
+  artifactScope?: string;
+  scopeKind?: XWorkmateArtifactScopeKind;
 };
 
 export async function prepareXWorkmateArtifacts(input: ExportInput): Promise<XWorkmateArtifactPrepare> {
@@ -132,6 +134,7 @@ export async function exportXWorkmateArtifacts(input: ExportInput): Promise<XWor
   const sinceUnixMs = nonNegativeNumber(params.sinceUnixMs, 0);
   const includeContent = optionalBoolean(params.includeContent, true);
   const latestIfEmpty = optionalBoolean(params.latestIfEmpty, false);
+  const latestTaskScopeIfEmpty = optionalBoolean(params.latestTaskScopeIfEmpty, false);
   const workspaceDir = resolveWorkspaceDir({
     config: input.config,
     pluginConfig,
@@ -154,17 +157,25 @@ export async function exportXWorkmateArtifacts(input: ExportInput): Promise<XWor
 
   if (candidates.length === 0 && latestIfEmpty) {
     const latestWarnings: string[] = [];
-    const latestCandidates = await collectCandidates({
-      scanRoot: workspaceRoot,
-      relativeRoot: workspaceRoot,
-      sinceUnixMs: 0,
-      skipTaskScopeRoot: true,
-      warnings: latestWarnings,
-    });
+    const latestCandidates = latestTaskScopeIfEmpty
+      ? await collectLatestSessionTaskCandidates({
+          workspaceRoot,
+          sessionKey,
+          warnings: latestWarnings,
+        })
+      : await collectCandidates({
+          scanRoot: workspaceRoot,
+          relativeRoot: workspaceRoot,
+          sinceUnixMs: 0,
+          skipTaskScopeRoot: true,
+          warnings: latestWarnings,
+        });
     if (latestCandidates.length > 0) {
       warnings.push(...latestWarnings);
       if (scopedExport) {
         warnings.push("scoped artifact directory is empty; exported latest workspace files instead");
+      } else if (latestTaskScopeIfEmpty) {
+        warnings.push("workspace export is empty; exported latest session task files instead");
       }
       candidates = latestCandidates;
       scopeKind = "workspace-latest";
@@ -186,6 +197,9 @@ export async function exportXWorkmateArtifacts(input: ExportInput): Promise<XWor
     }
     const bytes = await fs.readFile(candidate.absolutePath);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const artifactScopeForCandidate =
+      candidate.artifactScope || (scopeKind === "task" && artifactScope ? artifactScope : "");
+    const scopeKindForCandidate = candidate.scopeKind || scopeKind;
     const artifact: XWorkmateArtifact = {
       relativePath: candidate.relativePath,
       label: path.posix.basename(candidate.relativePath),
@@ -196,18 +210,20 @@ export async function exportXWorkmateArtifacts(input: ExportInput): Promise<XWor
         {
           v: 1,
           workspaceRootHash: workspaceRootHash(workspaceRoot),
-          scopeKind,
-          ...(scopeKind === "task" && artifactScope ? { artifactScope } : {}),
+          scopeKind: scopeKindForCandidate,
+          ...(scopeKindForCandidate === "task" && artifactScopeForCandidate
+            ? { artifactScope: artifactScopeForCandidate }
+            : {}),
           relativePath: candidate.relativePath,
           sizeBytes: bytes.byteLength,
           sha256,
         },
         pluginConfig,
       ),
-      scopeKind,
+      scopeKind: scopeKindForCandidate,
     };
-    if (scopeKind === "task" && artifactScope) {
-      artifact.artifactScope = artifactScope;
+    if (scopeKindForCandidate === "task" && artifactScopeForCandidate) {
+      artifact.artifactScope = artifactScopeForCandidate;
     }
     if (includeContent && bytes.byteLength <= maxInlineBytes) {
       artifact.encoding = "base64";
@@ -439,6 +455,49 @@ async function collectCandidates(input: {
       });
     }
   }
+}
+
+async function collectLatestSessionTaskCandidates(input: {
+  workspaceRoot: string;
+  sessionKey: string;
+  warnings: string[];
+}): Promise<Candidate[]> {
+  const sessionScope = [TASK_SCOPE_ROOT, safeScopeSegment(input.sessionKey)].join("/");
+  const sessionRoot = path.join(input.workspaceRoot, sessionScope.split("/").join(path.sep));
+  let entries;
+  try {
+    entries = await fs.readdir(sessionRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const candidates: Candidate[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name === "." || entry.name === "..") {
+      continue;
+    }
+    const artifactScope = [sessionScope, entry.name].join("/");
+    let scopeRoot: string;
+    try {
+      scopeRoot = resolveScopeRoot(input.workspaceRoot, artifactScope);
+    } catch {
+      continue;
+    }
+    const scopedCandidates = await collectCandidates({
+      scanRoot: scopeRoot,
+      relativeRoot: scopeRoot,
+      sinceUnixMs: 0,
+      skipTaskScopeRoot: false,
+      warnings: input.warnings,
+    });
+    candidates.push(
+      ...scopedCandidates.map((candidate) => ({
+        ...candidate,
+        artifactScope,
+        scopeKind: "task" as const,
+      })),
+    );
+  }
+  return candidates;
 }
 
 function artifactScopeFor(sessionKey: string, runId: string): string {
