@@ -176,7 +176,7 @@ describe("exportXWorkmateArtifacts", () => {
     expect(result.artifacts.map((entry) => entry.relativePath)).toEqual(["current.txt"]);
   });
 
-  it("does not scan the workspace root when the current task scope is empty", async () => {
+  it("does not scan the workspace root without a current-run timestamp", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
     await prepareXWorkmateArtifacts({
       params: { sessionKey: "thread-main", runId: "turn-1" },
@@ -196,6 +196,84 @@ describe("exportXWorkmateArtifacts", () => {
     expect(result.artifacts).toEqual([]);
     expect(result.manifestMarkdown).toContain("No artifacts found for this task run.");
     expect(result.manifestMarkdown).toContain("Artifact scope: `tasks/thread-main/turn-1`");
+  });
+
+  it("adopts current-run workspace root files into the task artifact scope", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
+    await prepareXWorkmateArtifacts({
+      params: { sessionKey: "thread-main", runId: "turn-1" },
+      pluginConfig: { workspaceDir: root },
+    });
+    const sinceUnixMs = Date.now() - 1_000;
+    await fs.writeFile(path.join(root, "xhs_account_security.md"), "# Account security\n");
+
+    const result = await exportXWorkmateArtifacts({
+      params: {
+        sessionKey: "thread-main",
+        runId: "turn-1",
+        sinceUnixMs,
+      },
+      pluginConfig: { workspaceDir: root },
+    });
+
+    expect(result.scopeKind).toBe("task");
+    expect(result.artifactScope).toBe("tasks/thread-main/turn-1");
+    expect(result.artifacts.map((entry) => entry.relativePath)).toEqual(["xhs_account_security.md"]);
+    expect(result.artifacts[0]).toMatchObject({
+      artifactScope: "tasks/thread-main/turn-1",
+      scopeKind: "task",
+      contentType: "text/markdown",
+      encoding: "base64",
+      content: Buffer.from("# Account security\n").toString("base64"),
+    });
+    expect(await fs.readFile(path.join(root, "tasks", "thread-main", "turn-1", "xhs_account_security.md"), "utf8")).toBe(
+      "# Account security\n",
+    );
+  });
+
+  it("creates the current task scope when adopting root files after bridge export", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
+    const sinceUnixMs = Date.now() - 1_000;
+    await fs.mkdir(path.join(root, "reports"), { recursive: true });
+    await fs.writeFile(path.join(root, "reports", "final.md"), "final");
+
+    const result = await exportXWorkmateArtifacts({
+      params: {
+        sessionKey: "thread-main",
+        runId: "turn-1",
+        sinceUnixMs,
+      },
+      pluginConfig: { workspaceDir: root },
+    });
+
+    expect(result.artifactScope).toBe("tasks/thread-main/turn-1");
+    expect(result.artifacts.map((entry) => entry.relativePath)).toEqual(["reports/final.md"]);
+    expect(result.warnings).toEqual([]);
+    expect(await fs.readFile(path.join(root, "tasks", "thread-main", "turn-1", "reports", "final.md"), "utf8")).toBe(
+      "final",
+    );
+  });
+
+  it("does not adopt old workspace root files into a later task scope", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
+    await prepareXWorkmateArtifacts({
+      params: { sessionKey: "thread-main", runId: "turn-1" },
+      pluginConfig: { workspaceDir: root },
+    });
+    await fs.writeFile(path.join(root, "old-root.md"), "old");
+    const stat = await fs.stat(path.join(root, "old-root.md"));
+
+    const result = await exportXWorkmateArtifacts({
+      params: {
+        sessionKey: "thread-main",
+        runId: "turn-1",
+        sinceUnixMs: stat.mtimeMs + 10_000,
+      },
+      pluginConfig: { workspaceDir: root },
+    });
+
+    expect(result.artifacts).toEqual([]);
+    await expect(fs.stat(path.join(root, "tasks", "thread-main", "turn-1", "old-root.md"))).rejects.toThrow();
   });
 
   it("rejects scoped exports that do not match the requested session/run", async () => {
@@ -221,7 +299,7 @@ describe("exportXWorkmateArtifacts", () => {
     ).rejects.toThrow("artifactScope does not match sessionKey/runId");
   });
 
-  it("does not fall back to workspace files when the scoped directory is empty", async () => {
+  it("does not adopt old workspace files when the scoped directory is empty", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
     const prepared = await prepareXWorkmateArtifacts({
       params: { sessionKey: "thread-main", runId: "turn-1" },

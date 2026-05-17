@@ -139,10 +139,13 @@ Export response payload:
 
 Files at or below `maxInlineBytes` also include `encoding: "base64"` and `content`.
 When `artifactScope` is omitted, export/list defaults to the current task scope
-derived from `sessionKey/runId`. If that scope has no files, export/list returns
-an empty artifact list with the manifest text `No artifacts found for this task
-run.` The plugin does not scan the workspace root and does not borrow artifacts
-from earlier task scopes.
+derived from `sessionKey/runId`. If `sinceUnixMs` is provided, export also
+adopts files created or changed in the workspace root during the current run by
+copying them into that task scope before returning the manifest. This covers
+agents that save output as `./file.md` while still keeping XWorkmate sync scoped
+to `tasks/<session>/<run>`. Without `sinceUnixMs`, export/list only reads the
+current task scope. The plugin never scans `tasks/` as a fallback and does not
+borrow artifacts from earlier task scopes.
 
 Each exported artifact includes `artifactRef`, a plugin-signed reference over
 the issued session/run scope, artifact scope, path, size, and SHA-256 digest. `read` accepts
@@ -191,6 +194,7 @@ only remote file access path.
 
 - Only files inside the resolved OpenClaw workspace are exported.
 - `.git`, `.openclaw`, `.xworkmate`, `.pi`, build outputs, and dependency folders are excluded from task artifact exports.
+- Workspace-root files are adopted only when `sinceUnixMs` is provided; adopted files are copied into the current `tasks/<safe-session-key>/<safe-run-id>` scope before listing or reading.
 - Symlinks are skipped to avoid workspace escape.
 - Files larger than `maxInlineBytes` are listed with metadata and a warning, but are not inlined.
 - `artifactScope` must be `tasks/<safe-session-key>/<safe-run-id>`.
