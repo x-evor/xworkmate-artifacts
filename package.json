@@ -1,6 +1,6 @@
 {
   "name": "openclaw-multi-session-plugins",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "OpenClaw multi-session plugin runtime support for scoped XWorkmate artifacts",
   "type": "module",
   "license": "MIT",
