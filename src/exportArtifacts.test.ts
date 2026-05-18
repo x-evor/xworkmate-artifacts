@@ -254,6 +254,36 @@ describe("exportXWorkmateArtifacts", () => {
     );
   });
 
+  it("adopts root Word documents into only the current task scope", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
+    const sinceUnixMs = Date.now() - 1_000;
+    await fs.writeFile(path.join(root, "article.docx"), "docx-content");
+
+    const result = await exportXWorkmateArtifacts({
+      params: {
+        sessionKey: "draft-article",
+        runId: "openclaw-run-1",
+        sinceUnixMs,
+        maxInlineBytes: 0,
+      },
+      pluginConfig: { workspaceDir: root },
+    });
+
+    expect(result.artifactScope).toBe("tasks/draft-article/openclaw-run-1");
+    expect(result.artifacts).toHaveLength(1);
+    expect(result.artifacts[0]).toMatchObject({
+      relativePath: "article.docx",
+      artifactScope: "tasks/draft-article/openclaw-run-1",
+      scopeKind: "task",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    expect(result.artifacts[0]?.encoding).toBeUndefined();
+    expect(await fs.readFile(path.join(root, "tasks", "draft-article", "openclaw-run-1", "article.docx"), "utf8")).toBe(
+      "docx-content",
+    );
+    await expect(fs.stat(path.join(root, "tasks", "draft-article", "turn-1", "article.docx"))).rejects.toThrow();
+  });
+
   it("does not adopt old workspace root files into a later task scope", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "tmp-openclaw-multi-session-plugins-"));
     await prepareXWorkmateArtifacts({

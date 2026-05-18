@@ -181,6 +181,9 @@ local users can open or download them directly from that workspace path.
 Gateway clients can use:
 
 - `xworkmate.artifacts.prepare` before `chat.send` to allocate a task artifact directory.
+- Pass the prepared `artifactScope`/`artifactDirectory` to `chat.send` and, if
+  `chat.send` returns a different OpenClaw `runId`, prepare/export with that
+  actual `runId` instead of the bridge request id.
 - `xworkmate.artifacts.list` for a metadata-only manifest and Markdown table.
 - `xworkmate.artifacts.read` with `artifactScope` and `relativePath` for one task file.
 - `xworkmate.artifacts.read` with `artifactRef` for a plugin-returned task file.
