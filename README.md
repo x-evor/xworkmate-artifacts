@@ -181,9 +181,10 @@ local users can open or download them directly from that workspace path.
 Gateway clients can use:
 
 - `xworkmate.artifacts.prepare` before `chat.send` to allocate a task artifact directory.
-- Pass the prepared `artifactScope`/`artifactDirectory` to `chat.send` and, if
-  `chat.send` returns a different OpenClaw `runId`, prepare/export with that
-  actual `runId` instead of the bridge request id.
+- Keep the prepared `artifactScope`/`artifactDirectory` in the gateway artifact
+  pipeline, not in `chat.send` params. If `chat.send` returns a different
+  OpenClaw `runId`, prepare/export with that actual `runId` instead of the
+  bridge request id.
 - `openclaw_multi_session_agents` from an OpenClaw task to call XWorkmate Bridge
   `/acp/rpc` with `multiAgent=true`, while deriving `sessionKey`, `runId`, and
   `workspaceDir` from the host task context instead of model-controlled tool
